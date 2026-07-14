@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CSL production tracker</title>
+<style>
+  :root {
+    --ink: #1c2b2a;
+    --ink-soft: #4a5957;
+    --paper: #f6f3ea;
+    --card: #ffffff;
+    --line: #d8d2c1;
+    --stamp-todo: #d8d2c1;
+    --stamp-progress: #c9922f;
+    --stamp-progress-bg: #fbf0dc;
+    --stamp-done: #2f6e56;
+    --stamp-done-bg: #e2ede7;
+    --accent: #2f6e56;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    padding: 32px 20px 60px;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+  }
+  h1 { font-family: 'Georgia', serif; font-size: 24px; font-weight: 700; margin: 0; }
+  .subtitle { font-size: 13px; color: var(--ink-soft); margin-top: 4px; }
+  .overall-row { display: flex; gap: 24px; text-align: right; }
+  .overall .num { font-size: 26px; font-weight: 700; color: var(--accent); line-height: 1; }
+  .overall .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); }
+
+  section.group { margin-bottom: 28px; }
+  .group-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 14px;
+  }
+  .group-head h2 { font-family: 'Georgia', serif; font-size: 18px; margin: 0; }
+  .group-head .pct { font-size: 13px; color: var(--ink-soft); }
+  .empty-msg { font-size: 13px; color: var(--ink-soft); margin: 0 0 12px; }
+
+  .topic-card { background: var(--card); border: 1px solid var(--line); margin-bottom: 14px; }
+  .topic-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 16px; border-bottom: 1px solid var(--line);
+  }
+  .topic-head .name { font-size: 15px; font-weight: 700; font-family: 'Georgia', serif; }
+  .topic-head .right { display: flex; align-items: center; gap: 10px; }
+  .topic-head .pct { font-size: 12px; color: var(--ink-soft); }
+  .remove-btn {
+    border: none; background: transparent; color: var(--ink-soft);
+    cursor: pointer; font-size: 16px; line-height: 1; padding: 2px 6px;
+  }
+  .remove-btn:hover { color: #a33; }
+
+  .stages { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1px; background: var(--line); }
+  .stage { background: var(--card); padding: 10px 4px; text-align: center; cursor: pointer; user-select: none; }
+  .stage .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink-soft); margin-bottom: 6px; }
+  .stamp {
+    width: 28px; height: 28px; margin: 0 auto; border-radius: 50%;
+    border: 2px solid var(--stamp-todo); display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: var(--ink-soft); background: transparent;
+  }
+  .stamp.progress { border-color: var(--stamp-progress); color: var(--stamp-progress); background: var(--stamp-progress-bg); }
+  .stamp.done { border-color: var(--stamp-done); color: var(--stamp-done); background: var(--stamp-done-bg); transform: rotate(-8deg); }
+  .stage .state-label { font-size: 9px; margin-top: 5px; color: var(--ink-soft); }
+
+  .meta-row { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; padding: 10px 16px 14px; border-top: 1px solid var(--line); }
+  .meta-row input {
+    border: 1px solid var(--line); background: var(--paper); font-size: 12px; padding: 6px 8px; color: var(--ink);
+  }
+
+  .add-row { display: flex; gap: 8px; margin-top: 4px; }
+  .add-row input {
+    flex: 1; border: 1px solid var(--line); background: var(--card); font-size: 13px; padding: 8px 10px; color: var(--ink);
+  }
+  .add-row button {
+    border: 1px solid var(--ink); background: var(--ink); color: var(--paper);
+    font-size: 13px; padding: 8px 16px; cursor: pointer; white-space: nowrap;
+  }
+  .add-row button:hover { opacity: 0.85; }
+
+  footer { text-align: center; font-size: 11px; color: var(--ink-soft); margin-top: 20px; }
+  .status-msg { font-size: 11px; color: var(--ink-soft); text-align: center; margin-bottom: 12px; min-height: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>CSL production tracker</h1>
+      <div class="subtitle">New CSLs · Update CSLs</div>
+    </div>
+    <div class="overall-row">
+      <div class="overall"><div class="num" id="new-pct">0%</div><div class="lbl">new</div></div>
+      <div class="overall"><div class="num" id="update-pct">0%</div><div class="lbl">update</div></div>
+      <div class="overall"><div class="num" id="overall-pct">0%</div><div class="lbl">overall</div></div>
+    </div>
+  </header>
+
+  <div class="status-msg" id="status-msg"></div>
+  <section class="group" id="group-new"></section>
+  <section class="group" id="group-update"></section>
+  <footer>Click a stamp to cycle: not started → in progress → done. Progress saves in this browser.</footer>
+</div>
+
+<script>
+const STAGES = [
+  { id: 'creativetext', label: 'Creative text' },
+  { id: 'creatives', label: 'Creatives' },
+  { id: 'metadata', label: 'Metadata' },
+  { id: 'longdesc', label: 'Long desc' },
+  { id: 'publish', label: 'Publish' },
+  { id: 'live', label: 'Live CSL' }
+];
+const STATE_ORDER = ['todo', 'progress', 'done'];
+const STATE_LABEL = { todo: 'Not started', progress: 'In progress', done: 'Done' };
+const STATE_MARK = { todo: '', progress: '…', done: '✓' };
+const STORAGE_KEY = 'csl-tracker-v2-standalone';
+
+let data = {
+  new: [
+    { name: 'Gadget loan', stages: {}, notes: '', owner: '' },
+    { name: 'Two-wheeler loan', stages: {}, notes: '', owner: '' },
+    { name: 'Used car loan', stages: {}, notes: '', owner: '' },
+    { name: 'Gas bill payment', stages: {}, notes: '', owner: '' }
+  ],
+  update: []
+};
+data.new.forEach(item => STAGES.forEach(s => item.stages[s.id] = 'todo'));
+
+function load() {
+  const statusMsg = document.getElementById('status-msg');
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.new) data.new = parsed.new;
+      if (parsed.update) data.update = parsed.update;
+    }
+  } catch (e) {
+    statusMsg.textContent = 'Starting fresh — no saved progress found on this device.';
+  }
+  render();
+}
+
+function save() {
+  const statusMsg = document.getElementById('status-msg');
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    statusMsg.textContent = 'Saved on this device';
+    setTimeout(() => { statusMsg.textContent = ''; }, 1200);
+  } catch (e) {
+    statusMsg.textContent = 'Could not save — changes may not persist.';
+  }
+}
+
+function cycleStage(section, idx, stageId) {
+  const item = data[section][idx];
+  const cur = item.stages[stageId] || 'todo';
+  item.stages[stageId] = STATE_ORDER[(STATE_ORDER.indexOf(cur) + 1) % STATE_ORDER.length];
+  save();
+  render();
+}
+
+function updateField(section, idx, field, value) {
+  data[section][idx][field] = value;
+  save();
+}
+
+function addRow(section) {
+  const input = document.getElementById(section + '-add-input');
+  const name = input.value.trim();
+  if (!name) return;
+  const stages = {};
+  STAGES.forEach(s => stages[s.id] = 'todo');
+  data[section].push({ name, stages, notes: '', owner: '' });
+  input.value = '';
+  save();
+  render();
+}
+
+function removeRow(section, idx) {
+  data[section].splice(idx, 1);
+  save();
+  render();
+}
+
+function itemPct(item) {
+  const vals = STAGES.map(s => item.stages[s.id] || 'todo');
+  const done = vals.filter(v => v === 'done').length;
+  return Math.round((done / STAGES.length) * 100);
+}
+
+function sectionPct(section) {
+  const items = data[section];
+  if (!items.length) return 0;
+  const total = items.length * STAGES.length;
+  let done = 0;
+  items.forEach(item => STAGES.forEach(s => { if ((item.stages[s.id] || 'todo') === 'done') done += 1; }));
+  return Math.round((done / total) * 100);
+}
+
+function overallPct() {
+  const all = [...data.new, ...data.update];
+  if (!all.length) return 0;
+  const total = all.length * STAGES.length;
+  let done = 0;
+  all.forEach(item => STAGES.forEach(s => { if ((item.stages[s.id] || 'todo') === 'done') done += 1; }));
+  return Math.round((done / total) * 100);
+}
+
+function renderGroup(section, title) {
+  const items = data[section];
+  const pct = sectionPct(section);
+  let html = '<div class="group-head"><h2>' + title + '</h2><span class="pct">' + (items.length ? pct + '% complete' : 'no items yet') + '</span></div>';
+
+  if (items.length === 0) {
+    html += '<p class="empty-msg">No CSLs here yet. Add one below.</p>';
+  }
+
+  items.forEach((item, idx) => {
+    const ip = itemPct(item);
+    html += '<div class="topic-card">';
+    html += '<div class="topic-head"><span class="name">' + item.name + '</span>';
+    html += '<div class="right"><span class="pct">' + ip + '% complete</span>';
+    html += '<button class="remove-btn" data-remove="' + section + ':' + idx + '" aria-label="Remove">×</button></div></div>';
+
+    html += '<div class="stages">';
+    STAGES.forEach(s => {
+      const state = item.stages[s.id] || 'todo';
+      html += '<div class="stage" data-cycle="' + section + ':' + idx + ':' + s.id + '">';
+      html += '<div class="label">' + s.label + '</div>';
+      html += '<div class="stamp ' + state + '">' + STATE_MARK[state] + '</div>';
+      html += '<div class="state-label">' + STATE_LABEL[state] + '</div></div>';
+    });
+    html += '</div>';
+
+    html += '<div class="meta-row">';
+    html += '<input data-owner="' + section + ':' + idx + '" value="' + (item.owner || '') + '" placeholder="Owner" />';
+    html += '<input data-notes="' + section + ':' + idx + '" value="' + (item.notes || '') + '" placeholder="Notes, links, blockers" />';
+    html += '</div></div>';
+  });
+
+  html += '<div class="add-row"><input id="' + section + '-add-input" placeholder="Add a CSL name" />';
+  html += '<button data-add="' + section + '">+ Add</button></div>';
+  return html;
+}
+
+function render() {
+  document.getElementById('new-pct').textContent = sectionPct('new') + '%';
+  document.getElementById('update-pct').textContent = sectionPct('update') + '%';
+  document.getElementById('overall-pct').textContent = overallPct() + '%';
+
+  document.getElementById('group-new').innerHTML = renderGroup('new', 'New CSLs');
+  document.getElementById('group-update').innerHTML = renderGroup('update', 'Update CSLs');
+
+  document.querySelectorAll('[data-cycle]').forEach(el => {
+    el.addEventListener('click', () => {
+      const [section, idx, stageId] = el.dataset.cycle.split(':');
+      cycleStage(section, parseInt(idx), stageId);
+    });
+  });
+  document.querySelectorAll('[data-remove]').forEach(el => {
+    el.addEventListener('click', () => {
+      const [section, idx] = el.dataset.remove.split(':');
+      removeRow(section, parseInt(idx));
+    });
+  });
+  document.querySelectorAll('[data-add]').forEach(el => {
+    el.addEventListener('click', () => addRow(el.dataset.add));
+  });
+  document.querySelectorAll('[data-owner]').forEach(el => {
+    el.addEventListener('change', () => {
+      const [section, idx] = el.dataset.owner.split(':');
+      updateField(section, parseInt(idx), 'owner', el.value);
+    });
+  });
+  document.querySelectorAll('[data-notes]').forEach(el => {
+    el.addEventListener('change', () => {
+      const [section, idx] = el.dataset.notes.split(':');
+      updateField(section, parseInt(idx), 'notes', el.value);
+    });
+  });
+}
+
+load();
+</script>
+</body>
+</html>
